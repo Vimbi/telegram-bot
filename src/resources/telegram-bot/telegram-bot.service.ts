@@ -28,6 +28,7 @@ export class TelegramBotService {
 
   @Hears('1')
   async hearsHi(ctx: Context) {
+    this._logger.log('HEARS 1', ctx.botInfo);
     await ctx.reply('Hey there');
   }
 }

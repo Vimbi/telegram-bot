@@ -64,9 +64,13 @@ async function bootstrap() {
   app.use(helmet());
   app.use(cookieParser());
 
-  const telegramBot = app.get(getBotToken());
-  const telegramBotWebhookPath = configService.get('telegram.webhookPath');
-  app.use(telegramBot.webhookCallback(telegramBotWebhookPath));
+  const telegramBot = app.get(getBotToken(configService.get('telegram.name')));
+  app.use(
+    await telegramBot.createWebhook({
+      domain: configService.get('app.backendDomain'),
+      path: configService.get('telegram.webhookPath'),
+    }),
+  );
 
   await app.listen(configService.get('app.port'));
   return configService.get('app.port');
