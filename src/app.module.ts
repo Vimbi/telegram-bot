@@ -26,9 +26,6 @@ import telegramConfig from './config/telegram.config';
     // EventsModule,
     ScheduleModule.forRoot(),
     TelegramBotModule,
-    TelegrafModule.forRootAsync({
-      useClass: TelegrafConfigService,
-    }),
   ],
   controllers: [],
   providers: [
