@@ -64,15 +64,15 @@ async function bootstrap() {
   app.use(helmet());
   app.use(cookieParser());
 
-  const telegramBot = app.get(getBotToken());
+  // const telegramBot = app.get(getBotToken());
 
-  logger.log('TELEGRAM BOT', JSON.stringify(telegramBot));
-  app.use(
-    await telegramBot.createWebhook({
-      domain: configService.get('app.backendDomain'),
-      path: configService.get('telegram.webhookPath'),
-    }),
-  );
+  // logger.log('TELEGRAM BOT', JSON.stringify(telegramBot));
+  // app.use(
+  //   await telegramBot.createWebhook({
+  //     domain: configService.get('app.backendDomain'),
+  //     path: configService.get('telegram.webhookPath'),
+  //   }),
+  // );
 
   await app.listen(configService.get('app.port'));
   return configService.get('app.port');
