@@ -64,7 +64,9 @@ async function bootstrap() {
   app.use(helmet());
   app.use(cookieParser());
 
-  const telegramBot = app.get(getBotToken(configService.get('telegram.name')));
+  const telegramBot = app.get(getBotToken(configService.get('telegram.token')));
+
+  logger.log('TELEGRAM BOT', JSON.stringify(telegramBot));
   app.use(
     await telegramBot.createWebhook({
       domain: configService.get('app.backendDomain'),
