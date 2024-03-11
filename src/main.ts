@@ -64,7 +64,7 @@ async function bootstrap() {
   app.use(helmet());
   app.use(cookieParser());
 
-  const telegramBot = app.get(getBotToken(configService.get('telegram.token')));
+  const telegramBot = app.get(getBotToken());
 
   logger.log('TELEGRAM BOT', JSON.stringify(telegramBot));
   app.use(
