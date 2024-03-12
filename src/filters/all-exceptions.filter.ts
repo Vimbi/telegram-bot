@@ -47,15 +47,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
           body={${stringifyBody}}
           message={${JSON.stringify(message)}}`,
     );
-    res.status(status).json({
-      statusCode: status,
-      message: message,
-      timestamp: new Date().toLocaleString('en-GB', {
-        timeZone: 'Europe/London',
-        hour12: false,
-      }),
-      path: req.url,
-    });
+    // res.status(status).json({
+    //   statusCode: status,
+    //   message: message,
+    //   timestamp: new Date().toLocaleString('en-GB', {
+    //     timeZone: 'Europe/London',
+    //     hour12: false,
+    //   }),
+    //   path: req.url,
+    // });
 
     if (exception instanceof Error && !(exception instanceof HttpException)) {
       this.logger.error(`message: ${exception.message}

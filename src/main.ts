@@ -14,7 +14,6 @@ import { configuration } from './logging/configuration';
 import { AllExceptionsFilter } from './filters/all-exceptions.filter';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { DEVELOPMENT } from './utils/constants/common-constants';
-import { getBotToken } from 'nestjs-telegraf';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -30,7 +29,6 @@ async function bootstrap() {
     new ValidationPipe({
       whitelist: true,
       enableDebugMessages: true,
-      validateCustomDecorators: true,
     }),
   );
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
@@ -63,16 +61,6 @@ async function bootstrap() {
 
   app.use(helmet());
   app.use(cookieParser());
-
-  // const telegramBot = app.get(getBotToken());
-
-  // logger.log('TELEGRAM BOT', JSON.stringify(telegramBot));
-  // app.use(
-  //   await telegramBot.createWebhook({
-  //     domain: configService.get('app.backendDomain'),
-  //     path: configService.get('telegram.webhookPath'),
-  //   }),
-  // );
 
   await app.listen(configService.get('app.port'));
   return configService.get('app.port');
