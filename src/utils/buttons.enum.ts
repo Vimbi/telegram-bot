@@ -1,4 +1,4 @@
 export enum TelegramButtonEnum {
   location = 'location',
-  info = 'info',
+  route = 'route',
 }

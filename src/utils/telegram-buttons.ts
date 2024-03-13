@@ -1,9 +1,21 @@
 import { Markup } from 'telegraf';
 import { TelegramButtonEnum } from './buttons.enum';
 
-export function telegramButtons(phone: string) {
-  return Markup.keyboard([
-    Markup.button.callback(TelegramButtonEnum.location, phone),
-    Markup.button.callback(TelegramButtonEnum.info, phone),
+export function telegramButtons({
+  phone,
+  trackNumber,
+}: {
+  trackNumber: string;
+  phone: string;
+}) {
+  return Markup.inlineKeyboard([
+    Markup.button.callback(
+      'Show location',
+      `${TelegramButtonEnum.location}:${phone}`,
+    ),
+    Markup.button.callback(
+      'Show route',
+      `${TelegramButtonEnum.route}:${trackNumber}`,
+    ),
   ]);
 }

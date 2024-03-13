@@ -1,46 +1,31 @@
-import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import {
-  Action,
-  Ctx,
-  Hears,
-  Message,
-  On,
-  Start,
-  Update,
-} from 'nestjs-telegraf';
-import { catchError, firstValueFrom, map } from 'rxjs';
+import { Action, Ctx, Message, On, Start, Update } from 'nestjs-telegraf';
 import { Context } from 'telegraf';
-import { createErrorMessage } from '../../utils/create-error-message';
 import { commonMsgs } from '../../shared/messages';
-import { IGetPhoneResponse } from '../../types/get-phone-response.interface';
 import { telegramButtons } from '../../utils/telegram-buttons';
-import { TelegramButtonEnum } from '../../utils/buttons.enum';
+import {
+  LOCATION_REG_EXP,
+  ROUTE_REG_EXP,
+} from '../../utils/constants/common-constants';
+import { createTrackNumberInfoMessage } from '../../utils/create-track-number-info-message';
+import { MovizorService } from '../movizor/movizor.service';
+import { MovizorRequestResultEnum } from '../movizor/movizor-request-result.enum';
+import { errorMsgs } from '../../shared/error-messages';
+import { DmvService } from '../dmv/dmv.service';
+import * as moment from 'moment';
 
 @Injectable()
 @Update()
 export class TelegramBotService {
-  private readonly _botName: string;
-  private readonly _getPhoneUrl: string;
-  private readonly _getPhoneToken: string;
   private readonly _logger = new Logger(TelegramBotService.name);
+  private readonly _routePageUrl: string;
   constructor(
+    private readonly dmvService: DmvService,
     private readonly configService: ConfigService,
-    private readonly httpService: HttpService,
+    private readonly movizorService: MovizorService,
   ) {
-    this._botName = this.configService.get('telegramBot.name');
-    this._getPhoneUrl = this.configService.get('dmv.getPhoneUrl');
-    this._getPhoneToken = this.configService.get('dmv.getPhoneToken');
-  }
-
-  /**
-   * Get bot connection link
-   * @returns link
-   */
-
-  public async getBotConnectionLink() {
-    return `https://t.me/${this._botName}`;
+    this._routePageUrl = this.configService.get('dmv.routePageUrl');
   }
 
   @Start()
@@ -50,41 +35,71 @@ export class TelegramBotService {
 
   @On('text')
   async getMessage(@Message('text') message: string, @Ctx() ctx: Context) {
-    console.log('!!!!', message);
-    const response = await firstValueFrom<IGetPhoneResponse>(
-      this.httpService
-        .get(`${this._getPhoneUrl}?track-number=${message}`, {
-          headers: {
-            Accept: 'application/json',
-            Authorization: `Bearer ${this._getPhoneToken}`,
-          },
-        })
-        .pipe(
-          map((response) => response.data),
-          catchError(async (error) => {
-            this._logger.error(
-              createErrorMessage({
-                error,
-                customMessage: 'DMV get phone error',
-              }),
-            );
-          }),
-        ),
+    const trackNumber = message.trim();
+    const getPhoneResponse = await this.dmvService.getPhoneByTrackNumber(
+      trackNumber,
     );
-    // if (!response?.phone) {
-    //   return commonMsgs.trackNotFound;
-    // }
-    // TODO find location
-    const location = { x: 55.751626, y: 37.619003 };
-    await ctx.sendLocation(
-      location.x,
-      location.y,
-      telegramButtons('(929) 555-43-93"'),
+    if (!getPhoneResponse?.phone) {
+      return commonMsgs.trackNotFound;
+    }
+    const getLastPositionResponse = await this.movizorService.getLastPosition(
+      getPhoneResponse.phone,
     );
+    if (getLastPositionResponse.result === MovizorRequestResultEnum.success) {
+      const {
+        place,
+        timestamp_request,
+        route_status,
+        distance,
+        distance_forecast_status,
+        distance_forecast_time,
+      } = getLastPositionResponse.data;
+      await ctx.replyWithHTML(
+        createTrackNumberInfoMessage({
+          trackNumber,
+          status: route_status,
+          lastRequest: moment
+            .unix(timestamp_request)
+            .format('DD.MM.YYYY hh:mm:ss'),
+          left: distance,
+          location: place,
+          distance_forecast_status,
+          distance_forecast_time,
+        }),
+        telegramButtons({
+          phone: getPhoneResponse.phone,
+          trackNumber,
+        }),
+      );
+    } else {
+      this._logger.error(
+        errorMsgs.getLocation(getLastPositionResponse.message),
+      );
+      await ctx.reply(commonMsgs.getLocationError);
+    }
   }
 
-  @Action(TelegramButtonEnum.location)
-  async getLocation(@Ctx() ctx: Context) {
-    console.log('1111');
+  /**
+   * Button handler for getting location by phone number
+   * @param ctx context
+   * @returns location or error message
+   */
+
+  @Action(LOCATION_REG_EXP)
+  async getLocation(@Ctx() ctx) {
+    const phone = ctx.update.callback_query.data.split(':')[1];
+    const response = await this.movizorService.getLastPosition(phone);
+    if (response.result === MovizorRequestResultEnum.success) {
+      await ctx.sendLocation(response.data.lat, response.data.lon);
+    } else {
+      this._logger.error(errorMsgs.getLocation(response.message));
+      await ctx.reply(commonMsgs.getLocationError);
+    }
+  }
+
+  @Action(ROUTE_REG_EXP)
+  async getLocation1(@Ctx() ctx) {
+    const trackNumber = ctx.update.callback_query.data.split(':')[1];
+    await ctx.reply(`${this._routePageUrl}?track-number=${trackNumber}`);
   }
 }
